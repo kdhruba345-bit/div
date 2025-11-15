@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Birthday Envelope — Final</title>
+<style>
+  :root{
+    --pink:#ff6699; --pink-dark:#ff4d88; --pink-light:#ff99bb;
+    --bg1:#ffe6f0; --bg2:#ffb3d9;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; height:100vh; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    overflow:hidden;
+  }
+
+  /* Envelope container */
+  .envelope{
+    position:relative; width:320px; height:220px; border-radius:10px;
+    perspective:1200px; /* for 3D flap rotation */
+  }
+
+  /* Bottom body with seam */
+  .body{
+    position:absolute; inset:0; background:var(--pink); border-radius:10px; z-index:1;
+    box-shadow:0 14px 32px rgba(0,0,0,.22);
+    overflow:hidden;
+  }
+  .body::after{
+    content:""; position:absolute; left:0; right:0; bottom:0;
+    border-left:160px solid transparent; border-right:160px solid transparent;
+    border-top:110px solid var(--pink-dark);
+  }
+
+  /* Letter card (content) */
+  .letter{
+    position:absolute; left:50%; top:50%;
+    width:280px; height:184px;
+    transform:translate(-50%,-50%) translateY(84px);
+    background:#fff; border-radius:12px; z-index:3;
+    padding:14px; display:flex; flex-direction:column; opacity:0;
+    box-shadow:0 8px 18px rgba(0,0,0,.18);
+    transition:transform 1s ease, opacity .6s ease;
+  }
+
+  /* Top flap (as element so z-index works) */
+  .flap{
+    position:absolute; left:0; right:0; top:0; height:0;
+    border-left:160px solid transparent; border-right:160px solid transparent;
+    border-bottom:110px solid var(--pink-light);
+    transform-origin:50% 0%; transform:rotateX(0deg);
+    transition:transform .9s ease, z-index 0s linear .9s;
+    z-index:4; /* above while closed */
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,.12));
+  }
+
+  /* Open state */
+  .open .letter{ transform:translate(-50%,-50%) translateY(-138px); opacity:1; }
+  .open .flap{ transform:rotateX(180deg); z-index:0; } /* send behind after rotate */
+
+  h2{ margin:0; color:#e60073; font-size:20px; text-align:center; }
+
+  /* Scrollable content */
+  .scroll-area{
+    margin-top:8px; flex:1; min-height:0; overflow-y:auto;
+    scroll-behavior:smooth; scroll-snap-type:y mandatory; padding-right:6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .panel{ scroll-snap-align:start; padding:8px 2px 14px; }
+  .wish{ color:#555; font-size:14px; line-height:1.6; text-align:center; }
+
+  .photos{ display:flex; gap:10px; justify-content:center; }
+  .photos img{
+    width:80px; height:80px; object-fit:cover; border-radius:12px;
+    border:2px solid #ff80b3; background:#f8f8f8;
+    box-shadow:0 4px 10px rgba(255,128,179,.45);
+  }
+
+  .controls{ display:flex; gap:10px; margin-top:10px; }
+  .btn{
+    flex:1; border:none; border-radius:999px; padding:10px 12px; cursor:pointer;
+    color:#fff; background:linear-gradient(135deg,#ff7aa8,#ff4f8b); font-weight:600;
+    box-shadow:0 6px 16px rgba(255,79,139,.35);
+  }
+  .btn.secondary{ background:#fff; color:#e60073; border:2px solid #ffc1da; box-shadow:none; }
+
+  /* Petals */
+  .petal{
+    position:fixed; top:-24px; width:20px; height:14px; pointer-events:none;
+    background:radial-gradient(ellipse at 30% 30%,#ffd1e6 0%,#ff9bc4 60%,#ff79b0 100%);
+    border-radius:60% 60% 60% 60% / 80% 80% 40% 40%;
+    animation:fall linear forwards; filter:drop-shadow(0 4px 6px rgba(0,0,0,.15));
+  }
+  @keyframes fall{
+    0%{ transform:translateY(0) translateX(0) rotate(0deg); }
+    100%{ transform:translateY(110vh) translateX(var(--drift,0px)) rotate(360deg); }
+  }
+
+  /* Mobile */
+  @media (max-width:420px){
+    .envelope{ width:300px; height:210px; }
+    .letter{ width:270px; height:178px; }
+    .photos img{ width:72px; height:72px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="envelope" id="envelope" aria-label="Birthday envelope">
+  <div class="body"></div>
+  <div class="flap" id="flap"></div>
+
+  <div class="letter" id="letter" role="region" aria-live="polite">
+    <h2>Happy Birthday!</h2>
+
+    <div class="scroll-area" id="scrollArea" aria-label="Wishes and photos">
+      <div class="panel">
+        <p class="wish">Wishing you a day as bright as your smile and a year as sweet as your heart. May every moment today bloom with love and joy! ✨🌸</p>
+      </div>
+      <div class="panel">
+        <p class="wish">May your dreams take flight, your worries be light, and your celebrations shine tonight. Keep glowing and growing! 💖</p>
+      </div>
+      <div class="panel">
+        <div class="photos">
+          <img src="ris1.jpeg" alt="Memory 1"/>
+          <img src="ris2.jpeg" alt="Memory 2"/>
+          <img src="ris3.jpeg" alt="Memory 3"/>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="wish">Here’s to laughter, surprises, and endless happiness—today and always. Happy Birthday, you amazing soul! 🎂🎈</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn secondary" id="btnClose" type="button">Close</button>
+      <button class="btn" id="btnScroll" type="button">Scroll</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const envelope = document.getElementById('envelope');
+  const letter = document.getElementById('letter');
+  const scrollArea = document.getElementById('scrollArea');
+  const btnClose = document.getElementById('btnClose');
+  const btnScroll = document.getElementById('btnScroll');
+
+  let isOpen = false, petalsLock = false;
+
+  // Open when clicking envelope background (not the letter)
+  envelope.addEventListener('click', (e)=>{
+    if(letter.contains(e.target)) return;
+    if(!isOpen) openEnvelope();
+  });
+
+  btnClose.addEventListener('click', (e)=>{ e.stopPropagation(); closeEnvelope(); });
+  btnScroll.addEventListener('click', (e)=>{ e.stopPropagation(); cycleScroll(); });
+
+  function openEnvelope(){
+    isOpen = true;
+    envelope.classList.add('open');
+    if(!petalsLock){
+      petalsLock = true; spawnPetals(26, 4200);
+      setTimeout(()=>petalsLock=false, 2500);
+    }
+    scrollToPanel(0);
+  }
+
+  function closeEnvelope(){
+    isOpen = false;
+    envelope.classList.remove('open');
+    scrollArea.scrollTo({ top:0, behavior:'auto' });
+  }
+
+  function spawnPetals(count=22, maxLife=5000){
+    for(let i=0;i<count;i++){
+      const p=document.createElement('div');
+      p.className='petal';
+      p.style.left=(Math.random()*innerWidth)+'px';
+      const d=3+Math.random()*2;
+      p.style.animationDuration=d+'s';
+      p.style.setProperty('--drift',(Math.random()*120-60)+'px');
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(), Math.min(maxLife, d*1000+300));
+    }
+  }
+
+  function panels(){ return [...scrollArea.querySelectorAll('.panel')]; }
+  function currentPanelIndex(){
+    const st=scrollArea.scrollTop; let idx=0, best=1e9;
+    panels().forEach((el,i)=>{ const diff=Math.abs(el.offsetTop-st); if(diff<best){ best=diff; idx=i; }});
+    return idx;
+  }
+  function scrollToPanel(i){
+    const ps=panels();
+    const t=ps[Math.max(0,Math.min(i,ps.length-1))];
+    scrollArea.scrollTo({ top:t.offsetTop, behavior:'smooth' });
+  }
+  function cycleScroll(){
+    const i=currentPanelIndex();
+    const next = i+1<panels().length ? i+1 : 0;
+    scrollToPanel(next);
+  }
+
+  // Keyboard: Enter/Space to open
+  envelope.tabIndex = 0;
+  envelope.addEventListener('keydown',(e)=>{
+    if((e.key==='Enter'||e.key===' ') && !isOpen) openEnvelope();
+  });
+</script>
+</body>
+</html>
